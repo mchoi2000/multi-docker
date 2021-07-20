@@ -1,0 +1,37 @@
+language: generic
+sudo: required
+services:
+  - docker
+
+before_install:
+  - docker build -f ./client/Dockerfile.dev -t mchoi2000/multi-docker ./client
+
+script:
+  - docker run -e CI=true mchoi2000/multi-docker npm test
+
+after_success:
+  - docker build -t mihwa/multi-client ./client
+  - docker build -t mihwa/multi-nginx ./nginx
+  - docker build -t mihwa/multi-server ./server
+  - docker build -t mihwa/multi-worker ./worker
+# login to docker CLI
+  - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_ID" --password-stdin
+# push images to dockerhub
+  - docker push mihwa/multi-client
+  - docker push mihwa/multi-nginx
+  - docker push mihwa/multi-server
+  - docker push mihwa/multi-worker
+
+
+
+deploy:
+  provider: elasticbeanstalk
+  region: "us-east-1"
+  app: "exercises"
+  env: "Exercises-env"
+  bucket_name: "elasticbeanstalk-us-east-1-579208050789"
+  bucket_path: "exercises"
+  on:
+    branch: master
+  access_key_id: $AWS_ACCESS_KEY
+  secret_access_key: $AWS_SECRET_KEY
